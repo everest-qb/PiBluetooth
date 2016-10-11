@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
+	<classpathentry kind="lib" path="lib/bluecove-2.1.0.jar" sourcepath="D:/samba/bluecove-2.1.0-sources-all/bluecove/src/main/java">
+		<attributes>
+			<attribute name="source_encoding" value="UTF-8"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/bluecove-gpl-2.1.0.jar" sourcepath="D:/samba/bluecove-2.1.0-sources-all/bluecove-gpl/src/main/java">
+		<attributes>
+			<attribute name="source_encoding" value="UTF-8"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/pi4j-core.jar" sourcepath="D:/qtmp/java_libs/pi4j-1.1/lib/pi4j-core-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/D:/qtmp/java_libs/pi4j-1.1/lib/pi4j-core-javadoc.jar!/"/>
+			<attribute name="source_encoding" value="UTF-8"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/marineapi-0.9.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/D:/qtmp/java_libs/marineapi-0.9.0/doc/javadoc/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
