@@ -29,7 +29,7 @@ public class Spi1G {
 		
 		//SpiDevice.DEFAULT_SPI_SPEED
 		spi = SpiFactory.getInstance(SpiChannel.CS0,
-				SpiDevice.DEFAULT_SPI_SPEED, 
+				SpiDevice.DEFAULT_SPI_SPEED/2, 
                 SpiMode.MODE_0);
 		
 		
@@ -40,14 +40,29 @@ public class Spi1G {
 		TimeUnit.MILLISECONDS.sleep(1);
 		
 		
+		
 		byte addr07W=(byte)0b00000000|(byte)0x07;
 		byte[] pageCommand=new byte[]{addr07W,(byte)0b01000000,(byte)0b00010001};
-		spi.write(pageCommand);
-		TimeUnit.MILLISECONDS.sleep(1);
+		spi.write(pageCommand);		
 		byte addr08W=(byte)0b00000000|(byte)0x08;
 		byte[] pmWCommand=new byte[]{addr08W,(byte)0b10011011,(byte)0b01110000};
 		spi.write(pmWCommand);	
+		//TimeUnit.MILLISECONDS.sleep(1);
+		
+		/*byte addr07W=(byte)0b00000000|(byte)0x07;
+		byte[] pageCommand=new byte[]{addr07W,(byte)0b01000000,(byte)0b00010001};
+		spi.write(addr07W);
+		spi.write((byte)0b01000000);
+		spi.write((byte)0b00010001);
 		TimeUnit.MILLISECONDS.sleep(1);
+		byte addr08W=(byte)0b00000000|(byte)0x08;
+		byte[] pmWCommand=new byte[]{addr08W,(byte)0b10011011,(byte)0b01110000};
+		spi.write(addr08W);
+		spi.write((byte)0b10011011);
+		spi.write((byte)0b01110000);
+		TimeUnit.MILLISECONDS.sleep(1);*/
+		
+		
 		
 		
 		/*byte addr0DW=(byte)0b00000000|(byte)0x0D;
@@ -57,13 +72,35 @@ public class Spi1G {
 			
 		
 		pageCommand=new byte[]{addr07W,(byte)0b10000000,(byte)0b00010001};
-		spi.write(pageCommand);
-		TimeUnit.MILLISECONDS.sleep(1);
+		spi.write(pageCommand);		
 		byte[] wire4Command=new byte[]{addr08W,(byte)0b00000000,(byte)0b01011001};
 		spi.write(wire4Command);
 		TimeUnit.MILLISECONDS.sleep(1);
 		
+		/*pageCommand=new byte[]{addr07W,(byte)0b10000000,(byte)0b00010001};
+		spi.write(addr07W);
+		spi.write((byte)0b10000000);
+		spi.write((byte)0b00010001);
+		TimeUnit.MILLISECONDS.sleep(1);
+		byte[] wire4Command=new byte[]{addr08W,(byte)0b00000000,(byte)0b01011001};
+		spi.write(addr08W);
+		spi.write((byte)0b00000000);
+		spi.write((byte)0b01011001);
+		TimeUnit.MILLISECONDS.sleep(1);*/
 		
+		//fifo test
+		byte fifoWrite=(byte) 0b01000000;
+		spi.write(fifoWrite,(byte)0xFF);
+		byte fifoRead =(byte) 0b11000000;
+		byte[] r= spi.write(fifoRead,(byte)0x00);
+		
+		
+		
+		
+		//spi.write((byte)0b00100000,(byte)0xFF,(byte)0b1010000);	
+		
+		TimeUnit.SECONDS.sleep(1);
+				
 		/*spi.write((byte)0b00010000);		
 		spi.write((byte)0b00011111);		
 		spi.write((byte)0b00010100);
@@ -335,8 +372,8 @@ public class Spi1G {
 		
 		
 		//PM rregister red for test spi
-		byte sysCommand= (byte)0b10000000|(byte)0x0C;		
-		result =spi.write(sysCommand);
+		byte sysCommand= (byte)0b10000000|(byte)0x07;		
+		result =spi.write(sysCommand,(byte)0x00,(byte)0x00);
 		
 		for(byte b:result){
 			console.println(b);

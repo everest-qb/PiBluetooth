@@ -1,2 +1,0 @@
-System.out.println(0b10000000);
-System.out.println(0xFF);
