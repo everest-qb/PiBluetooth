@@ -10,7 +10,7 @@ public class CC1201 {
 	public static byte ADDR_EXTEND=(byte) 0x2f;	
 	public static byte ADDR_FIFO=(byte) 0x3f;
 	
-	
+	public static byte STORE_SCAL=(byte)0x33;
 	public static byte STORE_SRX=(byte)0x34;
 	public static byte STORE_STX=(byte)0x35;
 	public static byte STORE_SFRX=(byte)0x3a;

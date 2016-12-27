@@ -1,3 +1,4 @@
+package Bluetooth;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -36,7 +37,7 @@ public class BluetoothServiceDiscovery implements DiscoveryListener {
 		// find devices
 		DiscoveryAgent agent = localDevice.getDiscoveryAgent();
 
-		System.out.println("Starting device inquiry¡K");
+		System.out.println("Starting device inquiryï¿½K");
 		agent.startInquiry(DiscoveryAgent.GIAC, bluetoothServiceDiscovery);
 
 		try {
