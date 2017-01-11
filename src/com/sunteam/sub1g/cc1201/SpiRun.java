@@ -1,7 +1,7 @@
 package com.sunteam.sub1g.cc1201;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +30,7 @@ public class SpiRun {
 	public static  GpioController gpio;
 	public static  GpioPinDigitalOutput pin;
 	public static  GpioPinDigitalInput  pin04;
-	public static  GpioPinDigitalInput  pin05;
+	//public static  GpioPinDigitalInput  pin05;
 	public static Object lock = new Object();
 	
 	public static boolean isTxDown=true;
@@ -45,8 +45,8 @@ public class SpiRun {
 			pin.setShutdownOptions(false, PinState.HIGH);
 			pin04 =gpio.provisionDigitalInputPin(RaspiPin.GPIO_04, PinPullResistance.PULL_DOWN);
 			pin04.setShutdownOptions(true); 
-			pin05 =gpio.provisionDigitalInputPin(RaspiPin.GPIO_05, PinPullResistance.PULL_UP);
-			pin05.setShutdownOptions(true); 
+			/*pin05 =gpio.provisionDigitalInputPin(RaspiPin.GPIO_05, PinPullResistance.PULL_UP);
+			pin05.setShutdownOptions(true);*/ 
 		} catch (IOException e) {
 			
 			e.printStackTrace();
@@ -110,7 +110,7 @@ public class SpiRun {
 		
 	});
 
-		pin05.addListener(new GpioPinListenerDigital(){
+		/*pin05.addListener(new GpioPinListenerDigital(){
 
 		@Override
 		public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {	
@@ -123,7 +123,7 @@ public class SpiRun {
 			}
 		}
 		
-	});
+	});*/
 		
 		byte cmd=0;
 		byte[] result=null;
@@ -139,9 +139,9 @@ public class SpiRun {
 		//SpiRun.easyConfig();
 		
 		if("txinit".equals(var))
-			SpiRun.Etsi_434_100kTXConfig();
+			SpiRun.Etsi100kTXConfig();
 		if("rxinit".equals(var))
-			SpiRun.Etsi_434_100kRXConfig();
+			SpiRun.Etsi100kRXConfig();
 			
 		TimeUnit.MILLISECONDS.sleep(1);
 		}
@@ -194,12 +194,14 @@ public class SpiRun {
 		}					
 		}
 		
+		DecimalFormat format=new DecimalFormat("000000");
+		
 		//mod tx test
 		if ("tx".equals(var)) {
 			SpiRun.strobes(CC1201.STORE_SFTX);					
-			for(int i=0;i<360;i++){	
+			for(int i=0;i<10;i++){	
 				byte[] data=new byte[20];
-				byte[] uuid=new String("123456").getBytes("US-ASCII");
+				byte[] uuid=format.format(i).getBytes("US-ASCII");
 				for(int j=0;j<6;j++)
 					data[j]=uuid[j];
 				
