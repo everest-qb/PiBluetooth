@@ -34,8 +34,7 @@ public class ProcessThread extends Thread {
 
 			pWriter.close();
 			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+		} catch (IOException e) {			
 			e.printStackTrace();
 		}		
 	}	
