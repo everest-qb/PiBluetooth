@@ -15,7 +15,7 @@ public class PwmTest {
 	public static void main(String[] args) throws Exception {		 	
 		 		
 		PwmTest sound=new PwmTest();
-		for(int i=1;i<7;i++){
+		for(int i=1;i<70;i++){
 			
 			
 			
@@ -24,7 +24,7 @@ public class PwmTest {
 				sound.sound(100);
 			}else{
 				System.out.println("KZ:" + 3000);
-				sound.sound(4000);
+				sound.sound(3000);
 			}
 		}
 		 

@@ -18,6 +18,8 @@ public class Temperature {
 	    }
 
 	   GpioUtil.export(27, GpioUtil.DIRECTION_OUT); 
+	   Gpio.pinMode(27, Gpio.OUTPUT);
+	   Gpio.digitalWrite(27, Gpio.HIGH);
 	}
 
 	public void getTemperature() {
@@ -30,7 +32,7 @@ public class Temperature {
 		   Gpio.delay(18);//18ms
 		  
 
-		   Gpio.digitalWrite(27, Gpio.HIGH);   
+		   Gpio.digitalWrite(27, Gpio.HIGH); 		  
 		   //20~40us
 		  
 		   
@@ -110,30 +112,36 @@ public class Temperature {
 
 		   List<Long> list=new ArrayList<Long>();
 		   
+		   long p1=System.nanoTime();		   		  
 		   
-		   Gpio.pinMode(27, Gpio.OUTPUT);
 		   Gpio.digitalWrite(27, Gpio.LOW);
+		   p1=check(list,p1);// 0
 		   Gpio.delay(18);//18ms
+		   p1=check(list,p1);// 1
 		  		
-		   Gpio.digitalWrite(27, Gpio.HIGH);   
-		   //20~40us		   
+		   Gpio.digitalWrite(27, Gpio.HIGH);   		   		  
 		   //Gpio.delayMicroseconds(20);
+		   //20~40us
 		   //System.out.println("3: "+System.nanoTime());
-		   
-		   Gpio.pinMode(27, Gpio.INPUT);		 
-		   int status=Gpio.digitalRead(27);		 
-		   System.out.println("status: "+status);
+		   p1=check(list,p1);// 2		   
+		   Gpio.pinMode(27, Gpio.INPUT);		   
+		   p1=check(list,p1);// 3
+		   //int status=Gpio.digitalRead(27);		 
+		   //p1=check(list,p1);// 4
+		   //System.out.println("status: "+status);
 		   
 		   //low 80us  high 80us
-		   long p1=System.nanoTime();
-		   while(System.nanoTime()-p1<5000000){
-			   long t=System.nanoTime();
+		 /*if(list.get(1)+list.get(2)>120)
+			 return ;
+		   
+		   int status=0;
+		   while(System.nanoTime()-p1<5000000){			  
 			   int check=Gpio.digitalRead(27);
 			   if(status!=check){
-				   list.add(t);
+				   p1=check(list,p1);// 5
 				   status=check;
 			   }
-		   }
+		   }*/
 		 
 		   
 		   Gpio.pinMode(27, Gpio.OUTPUT);
@@ -144,7 +152,7 @@ public class Temperature {
 			   System.out.print(list.get(k)+" ");
 		   }
 		   
-		   System.out.println();
+		   System.out.println("");
 		   
 		   //one bite =50ns low + if 26~28us high(0) or 70us high(1)
 		   //  total 40 bit data 8 bit integral RH data+8 bit decimal RH data+8 bit integral T data+8 bit decimal T data
@@ -214,6 +222,12 @@ public class Temperature {
 		  return (dht22_dat[4] == ((dht22_dat[0] + dht22_dat[1] + dht22_dat[2] + dht22_dat[3]) & 0xFF));
 		}
 	
+		private long check(List<Long> list,long p1){
+			long tmp=System.nanoTime();
+			 list.add(tmp-p1);
+			 return tmp;
+		}
+		
 	public static void main(String[] args) throws Exception {
 
 		Temperature dht = new Temperature();
