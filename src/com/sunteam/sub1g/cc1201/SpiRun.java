@@ -30,10 +30,12 @@ public class SpiRun {
 	public static  GpioController gpio;
 	public static  GpioPinDigitalOutput pin;
 	public static  GpioPinDigitalInput  pin04;
+	public static   GpioPinDigitalOutput pin0;
 	//public static  GpioPinDigitalInput  pin05;
 	public static Object lock = new Object();
 	
 	public static boolean isTxDown=true;
+	public static boolean isSample=false;
 	
 	static {
 		try {
@@ -45,6 +47,8 @@ public class SpiRun {
 			pin.setShutdownOptions(false, PinState.HIGH);
 			pin04 =gpio.provisionDigitalInputPin(RaspiPin.GPIO_04, PinPullResistance.PULL_DOWN);
 			pin04.setShutdownOptions(true); 
+			pin0 = gpio.provisionDigitalOutputPin(RaspiPin.GPIO_00, "GET_MSG_LED", PinState.LOW);
+			pin0.setShutdownOptions(true, PinState.LOW);
 			/*pin05 =gpio.provisionDigitalInputPin(RaspiPin.GPIO_05, PinPullResistance.PULL_UP);
 			pin05.setShutdownOptions(true);*/ 
 		} catch (IOException e) {
@@ -75,17 +79,26 @@ public class SpiRun {
 							synchronized (lock) {
 								byte numRx = SpiRun.rExt((byte) 0xD7);
 								//byte avableNumRx = SpiRun.rExt((byte) 0xD9);
-								console.println(Thread.currentThread().getName() + " Recive NU:" + numRx);
-								/*if(numRx>0){
-								byte[] data=SpiRun.srFIFO(numRx);
-								console.println( DatatypeConverter.printHexBinary(data));
-								}*/
-								if (numRx >= 22) {
-									for(int i=0;i<(numRx/22);i++){
-										byte[] data=SpiRun.srFIFO(20);
-										byte lqi=(byte) (data[21] & 0x7f);
-										console.println("Result["+data[0]+"] => RSSI:" +data[20]+" LQI:"+lqi);
-										console.println( DatatypeConverter.printHexBinary(data));
+								//console.println(Thread.currentThread().getName() + " Recive NU:" + numRx);
+								
+								if (numRx >= 23) {
+									for(int i=0;i<(numRx/23);i++){
+										byte[] data=SpiRun.srFIFO(21);
+
+										byte lqi = (byte) (data[22] & 0x7f);
+										byte[] id = Arrays.copyOfRange(data, 1,13);
+										int hr = Arrays.copyOfRange(data, 13, 14)[0] & 0xff;
+										int oxygen = Arrays.copyOfRange(data, 14, 15)[0] & 0xff;
+										byte[] tem = Arrays.copyOfRange(data, 15, 17);
+										int tempH = tem[0] & 0xff;
+										int tempL = tem[1] & 0xff;
+										String uuid = DatatypeConverter.printHexBinary(id);
+												//new String(id, Charset.forName("US-ASCII"));
+										float temperature = (tempH * 256 + tempL) / 100f;
+										console.println(DatatypeConverter.printHexBinary(data));
+										console.println("Result[" + uuid + "] => RSSI:" + data[21] + " LQI:" + lqi);
+										console.println("HR:"+hr+" OXY:"+oxygen+" Temperature:"+temperature);										
+										pin0.blink(50,100);
 									}															
 								}
 							}
@@ -182,51 +195,86 @@ public class SpiRun {
 		
 		
 		//mode rx test	
-		if("rx".equals(var)){						
-			SpiRun.strobes(CC1201.STORE_SFRX);	
-			SpiRun.strobes(CC1201.STORE_SRX);		
-		for (int j = 0; j < 240; j++) {
-			TimeUnit.SECONDS.sleep(1);
-			byte check = SpiRun.rExt((byte) 0x73);	
-			console.println("MARCSTATE:[" + DatatypeConverter.printHexBinary(new byte[]{check})+"]");
-			if(CC1201.MARCSTATE_RX_FIFO_ERR==check){
-				byte status=SpiRun.rExt((byte)0x94);
-				console.println("Status:"+SpiRun.bytePrint(status)); 	
+		if ("rx".equals(var)) {			
 				SpiRun.strobes(CC1201.STORE_SFRX);
 				SpiRun.strobes(CC1201.STORE_SRX);
-			}			
-		}					
+				for (int j = 0; j < 999999999; j++) {
+					TimeUnit.SECONDS.sleep(1);
+					byte check = SpiRun.rExt((byte) 0x73);
+					//console.println("MARCSTATE:[" + DatatypeConverter.printHexBinary(new byte[] { check }) + "]");
+					if (CC1201.MARCSTATE_RX_FIFO_ERR == check) {
+						byte status = SpiRun.rExt((byte) 0x94);
+						console.println("Status:" + SpiRun.bytePrint(status));
+						SpiRun.strobes(CC1201.STORE_SFRX);
+						SpiRun.strobes(CC1201.STORE_SRX);
+					}
+				}			
 		}
 		
 		DecimalFormat format=new DecimalFormat("000000000000");
-		
+		SpiRun.isSample=true;
 		//mod tx test
 		if ("tx".equals(var)) {
-			SpiRun.strobes(CC1201.STORE_SFTX);					
-			for(int i=0;i<10;i++){	
-				byte[] data=new byte[20];
-				byte[] uuid=format.format(i).getBytes("US-ASCII");
-				for(int j=0;j<12;j++)
-					data[j]=uuid[j];
-				
-				Random r =new Random();
-				byte[] gen=new byte[4];
-				r.nextBytes(gen);
-				data[12]=gen[0];
-				data[13]=gen[1];
-				data[14]=gen[2];
-				data[15]=gen[3];
-				for(int j=16;j<20;j++)
-					data[j]=0;
-				SpiRun.swFIFO(data);
-				SpiRun.isTxDown=false;
-				SpiRun.strobes(CC1201.STORE_STX);
-				long beginT=System.nanoTime();//&& (System.nanoTime()-beginT)<100000
-				while(SpiRun.isTxDown==false){
-					TimeUnit.MILLISECONDS.sleep(100);//20 ms 50k 12m; 10ms 100k 6m
+			if (!SpiRun.isSample) {
+				SpiRun.strobes(CC1201.STORE_SFTX);
+				for (int i = 0; i < 10; i++) {
+					byte[] data = new byte[20];
+					byte[] uuid = format.format(i).getBytes("US-ASCII");
+					for (int j = 0; j < 12; j++)
+						data[j] = uuid[j];
+
+					Random r = new Random();
+					byte[] gen = new byte[4];
+					r.nextBytes(gen);
+					data[12] = gen[0];
+					data[13] = gen[1];
+					data[14] = gen[2];
+					data[15] = gen[3];
+					for (int j = 16; j < 20; j++)
+						data[j] = 0;
+					SpiRun.swFIFO(data);
+					SpiRun.isTxDown = false;
+					SpiRun.strobes(CC1201.STORE_STX);
+					long beginT = System.nanoTime();// &&
+													// (System.nanoTime()-beginT)<100000
+					while (!SpiRun.isTxDown) {
+						TimeUnit.MILLISECONDS.sleep(100);// 20 ms 50k 12m; 10ms
+															// 100k
+															// 6m
+					}
 				}
-			}	
-			TimeUnit.SECONDS.sleep(20);	
+				TimeUnit.SECONDS.sleep(20);
+			}else{
+				console.println("sample tx");	
+				SpiRun.strobes(CC1201.STORE_SFTX);
+				for (int i = 0; i < 50; i++) {																				
+					byte[] data = new byte[21];
+					byte[] uuid = format.format(i).getBytes("US-ASCII");
+					data[0]=(byte)0xdb;
+					for (int j = 1; j < 13; j++)
+						data[j] = uuid[j-1];
+
+					Random r = new Random();
+					byte[] gen = new byte[4];
+					r.nextBytes(gen);
+					data[13] = gen[0];
+					data[14] = gen[1];
+					data[15] = gen[2];
+					data[16] = gen[3];
+					for (int j = 17; j < 21; j++)
+						data[j] = 0;					
+					SpiRun.swFIFO(data);
+					SpiRun.isTxDown = false;
+					SpiRun.strobes(CC1201.STORE_STX);
+					long beginT = System.nanoTime();// &&
+													// (System.nanoTime()-beginT)<100000					
+					while (!SpiRun.isTxDown) {
+						TimeUnit.MILLISECONDS.sleep(200);// 20 ms 50k 12m; 10ms  100k  6m
+					}					
+				}
+				TimeUnit.SECONDS.sleep(5);
+			
+			}
 		}
 		
 				
@@ -419,13 +467,17 @@ public class SpiRun {
 	}
 	
 	public static void Sample_50k_TXConfig() throws Exception{
+		SpiRun.isSample=true;
+		SpiRun.wReg((byte)0x04,(byte)0x45);
+		SpiRun.wReg((byte)0x05,(byte)0x52);
+		SpiRun.wReg((byte)0x06,(byte)0x53);
+		SpiRun.wReg((byte)0x07,(byte)0x54);
 		SpiRun.wReg((byte)0x08,(byte)0xa9);
 		SpiRun.wReg((byte)0x0b,(byte)0x0b);
 		SpiRun.wReg((byte)0x0e,(byte)0x8a);
-		SpiRun.wReg((byte)0x0f,(byte)0xc8);
-		SpiRun.wReg((byte)0x0c,(byte)0x4b);
+		SpiRun.wReg((byte)0x0f,(byte)0xc8);		
 		SpiRun.wReg((byte)0x10,(byte)0x10);
-		SpiRun.wReg((byte)0x11,(byte)0x42);
+		SpiRun.wReg((byte)0x11,(byte)0x40);
 		SpiRun.wReg((byte)0x12,(byte)0x05);
 		SpiRun.wReg((byte)0x13,(byte)0x94);
 		SpiRun.wReg((byte)0x14,(byte)0x7a);
@@ -434,40 +486,101 @@ public class SpiRun {
 		SpiRun.wReg((byte)0x17,(byte)0xee);		
 		SpiRun.wReg((byte)0x1b,(byte)0x11);		
 		SpiRun.wReg((byte)0x1c,(byte)0x94);		
-		SpiRun.wReg((byte)0x1d,(byte)0x80);		
-		SpiRun.wReg((byte)0x20,(byte)0x12);		
-		SpiRun.wReg((byte)0x26,(byte)0x00);							
-		SpiRun.wReg((byte)0x2c,(byte)0x53);
-		SpiRun.wReg((byte)0x2e,(byte)0x14);
+		SpiRun.wReg((byte)0x1d,(byte)0x80);	//crc drop
+		SpiRun.wReg((byte)0x1e,(byte)0xdb);// address
+		SpiRun.wReg((byte)0x20,(byte)0x14);		
+		SpiRun.wReg((byte)0x26,(byte)0x00);
+		SpiRun.wReg((byte)0x27,(byte)0x0b);//addree filter type
+		SpiRun.wReg((byte)0x2b,(byte)0x5f);
+		SpiRun.wReg((byte)0x2e,(byte)0x15);//  fixed packet length
 		
 		
-		SpiRun.wExt((byte)0x00,(byte)0x1c);		
+		SpiRun.wExt((byte)0x00,(byte)0x1c);
+		SpiRun.wExt((byte)0x01,(byte)0x22);
 		SpiRun.wExt((byte)0x02,(byte)0x03);
 		SpiRun.wExt((byte)0x05,(byte)0x02);
 		SpiRun.wExt((byte)0x0c,(byte)0x56);
-		SpiRun.wExt((byte)0x0d,(byte)0xcc);
-		SpiRun.wExt((byte)0x0e,(byte)0xcc);
+		SpiRun.wExt((byte)0x0d,(byte)0x99);
+		SpiRun.wExt((byte)0x0e,(byte)0x99);
 		SpiRun.wExt((byte)0x10,(byte)0xee);
 		SpiRun.wExt((byte)0x11,(byte)0x10);
-		SpiRun.wExt((byte)0x12,(byte)0x04);		
-		SpiRun.wExt((byte)0x13,(byte)0x50);		
+		SpiRun.wExt((byte)0x12,(byte)0x07);		
+		SpiRun.wExt((byte)0x13,(byte)0xa5);		
 		SpiRun.wExt((byte)0x16,(byte)0x40);
 		SpiRun.wExt((byte)0x17,(byte)0x0e);
 		SpiRun.wExt((byte)0x19,(byte)0x03);
+		SpiRun.wExt((byte)0x1a,(byte)0x02);
 		SpiRun.wExt((byte)0x1b,(byte)0x33);
-		SpiRun.wExt((byte)0x1c,(byte)0xf7);
-		SpiRun.wExt((byte)0x1d,(byte)0x0f);		
+		SpiRun.wExt((byte)0x1c,(byte)0xf3);
+		SpiRun.wExt((byte)0x1d,(byte)0x13);		
 		SpiRun.wExt((byte)0x1f,(byte)0x00);
 		SpiRun.wExt((byte)0x20,(byte)0x6e);
 		SpiRun.wExt((byte)0x21,(byte)0x1c);
 		SpiRun.wExt((byte)0x22,(byte)0xac);
-		SpiRun.wExt((byte)0x27,(byte)0xb5);
+		SpiRun.wExt((byte)0x27,(byte)0xb8);
 		SpiRun.wExt((byte)0x2f,(byte)0x09);
-		SpiRun.wExt((byte)0x32,(byte)0x0e);		
-		SpiRun.wExt((byte)0x36,(byte)0x03);
+		SpiRun.wExt((byte)0x32,(byte)0x0e);				
 	}
 	
 	public static void Sample_50k_RXConfig() throws Exception{
+		wReg((byte)0x04,(byte)0x45);
+		wReg((byte)0x05,(byte)0x52);
+		wReg((byte)0x06,(byte)0x53);
+		wReg((byte)0x07,(byte)0x54);
+		wReg((byte)0x08,(byte)0xa9);
+		wReg((byte)0x0b,(byte)0x0b);
+		wReg((byte)0x0e,(byte)0x8a);
+		wReg((byte)0x0f,(byte)0xc8);		
+		wReg((byte)0x10,(byte)0x10);
+		wReg((byte)0x11,(byte)0x42);
+		wReg((byte)0x12,(byte)0x05);
+		wReg((byte)0x13,(byte)0x94);
+		wReg((byte)0x14,(byte)0x7a);
+		wReg((byte)0x15,(byte)0xe1);
+		wReg((byte)0x16,(byte)0x27);
+		wReg((byte)0x17,(byte)0xee);		
+		wReg((byte)0x1b,(byte)0x11);		
+		wReg((byte)0x1c,(byte)0x94);				
+		wReg((byte)0x1d,(byte)0xff);//crc drop
+		wReg((byte)0x1e,(byte)0xdb);// address		
+		wReg((byte)0x20,(byte)0x14);		
+		wReg((byte)0x26,(byte)0x00);
+		wReg((byte)0x27,(byte)0x0b);//addree filter type
+		wReg((byte)0x29,(byte)0x3f);//RXOFF_MODE
+		wReg((byte)0x2b,(byte)0x5f);//PA power ramp target level
+		wReg((byte)0x2e,(byte)0x15);//  fixed packet length
+				
+		wExt((byte)0x00,(byte)0x1c);		
+		wExt((byte)0x02,(byte)0x03);
+		wExt((byte)0x05,(byte)0x02);
+		wExt((byte)0x0c,(byte)0x56);
+		wExt((byte)0x0d,(byte)0x99);
+		wExt((byte)0x0e,(byte)0x99);
+		wExt((byte)0x10,(byte)0xee);
+		wExt((byte)0x11,(byte)0x10);
+		wExt((byte)0x12,(byte)0x07);		
+		wExt((byte)0x13,(byte)0xa5);		
+		wExt((byte)0x16,(byte)0x40);
+		wExt((byte)0x17,(byte)0x0e);
+		wExt((byte)0x19,(byte)0x03);
+		wExt((byte)0x1b,(byte)0x33);		
+		wExt((byte)0x1d,(byte)0x17);		
+		wExt((byte)0x1f,(byte)0x00);
+		wExt((byte)0x20,(byte)0x6e);
+		wExt((byte)0x21,(byte)0x1c);
+		wExt((byte)0x22,(byte)0xac);
+		wExt((byte)0x27,(byte)0xb5);
+		wExt((byte)0x2f,(byte)0x09);
+		wExt((byte)0x32,(byte)0x0e);		
+		wExt((byte)0x36,(byte)0x03);
+	}
+	
+	/*public static void Sample_50k_RXConfig() throws Exception{
+		SpiRun.isSample=true;
+		SpiRun.wReg((byte)0x04,(byte)0x45);
+		SpiRun.wReg((byte)0x05,(byte)0x52);
+		SpiRun.wReg((byte)0x06,(byte)0x53);
+		SpiRun.wReg((byte)0x07,(byte)0x54);
 		SpiRun.wReg((byte)0x08,(byte)0xa9);
 		SpiRun.wReg((byte)0x0b,(byte)0x0b);
 		SpiRun.wReg((byte)0x0e,(byte)0x8a);
@@ -483,12 +596,14 @@ public class SpiRun {
 		SpiRun.wReg((byte)0x17,(byte)0xee);		
 		SpiRun.wReg((byte)0x1b,(byte)0x11);		
 		SpiRun.wReg((byte)0x1c,(byte)0x94);		
-		SpiRun.wReg((byte)0x1d,(byte)0x00);		
+		SpiRun.wReg((byte)0x1d,(byte)0x80);	//crc drop
+		SpiRun.wReg((byte)0x1e,(byte)0xdb);// address
 		SpiRun.wReg((byte)0x20,(byte)0x12);		
-		SpiRun.wReg((byte)0x26,(byte)0x00);					
+		SpiRun.wReg((byte)0x26,(byte)0x00);	
+		SpiRun.wReg((byte)0x27,(byte)0x0b);//addree filter type
 		SpiRun.wReg((byte)0x29,(byte)0x7f);
 		SpiRun.wReg((byte)0x2c,(byte)0x53);
-		SpiRun.wReg((byte)0x2e,(byte)0x14);
+		SpiRun.wReg((byte)0x2e,(byte)0x15);//  fixed packet length
 		
 		
 		SpiRun.wExt((byte)0x00,(byte)0x1c);		
@@ -515,9 +630,10 @@ public class SpiRun {
 		SpiRun.wExt((byte)0x2f,(byte)0x09);
 		SpiRun.wExt((byte)0x32,(byte)0x0e);		
 		SpiRun.wExt((byte)0x36,(byte)0x03);
-	}
+	}*/
 	
-	public static void Etsi_434_100kRXConfig() throws Exception{	
+	public static void Etsi_434_100kRXConfig() throws Exception{
+		SpiRun.isSample=false;
 		SpiRun.wReg((byte)0x08,(byte)0xa8);
 		SpiRun.wReg((byte)0x09,(byte)0x23);
 		SpiRun.wReg((byte)0x0a,(byte)0x47);
@@ -567,6 +683,7 @@ public class SpiRun {
 	}
 	
 	public static void Etsi_434_100kTXConfig() throws Exception{	
+		SpiRun.isSample=false;
 		SpiRun.wReg((byte)0x08,(byte)0xa8);
 		SpiRun.wReg((byte)0x09,(byte)0x23);
 		SpiRun.wReg((byte)0x0a,(byte)0x47);
@@ -617,7 +734,8 @@ public class SpiRun {
 	}
 	
 	
-	public static void Etsi100kRXConfig() throws Exception{		
+	public static void Etsi100kRXConfig() throws Exception{	
+		SpiRun.isSample=false;
 		SpiRun.wReg((byte)0x08,(byte)0xa8);
 		SpiRun.wReg((byte)0x09,(byte)0x23);
 		SpiRun.wReg((byte)0x0a,(byte)0x47);
@@ -666,7 +784,8 @@ public class SpiRun {
 		SpiRun.wExt((byte)0x36,(byte)0x03);
 	}
 	
-	public static void Etsi100kTXConfig() throws Exception{	
+	public static void Etsi100kTXConfig() throws Exception{
+		SpiRun.isSample=false;
 		SpiRun.wReg((byte)0x08,(byte)0xa8);
 		SpiRun.wReg((byte)0x09,(byte)0x23);
 		SpiRun.wReg((byte)0x0a,(byte)0x47);
@@ -716,7 +835,8 @@ public class SpiRun {
 		SpiRun.wExt((byte)0x32,(byte)0x0e);				
 	}
 	
-	public static void easyConfig() throws Exception{		
+	public static void easyConfig() throws Exception{	
+		SpiRun.isSample=false;
 		SpiRun.wReg((byte)0x04,(byte)0x55);//sync word
 		SpiRun.wReg((byte)0x05,(byte)0x55);//sync word
 		SpiRun.wReg((byte)0x06,(byte)0x7a);//sync word

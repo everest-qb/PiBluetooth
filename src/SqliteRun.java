@@ -1,10 +1,13 @@
 import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.DecimalFormat;
 
 import javax.sql.DataSource;
+import javax.xml.bind.DatatypeConverter;
 
 import org.apache.commons.dbcp2.ConnectionFactory;
 import org.apache.commons.dbcp2.DriverManagerConnectionFactory;
@@ -24,11 +27,11 @@ public class SqliteRun {
 		
 		long point=System.nanoTime();			
 		File tmpFile =new  File("sqlite.db");		
-		DataSource dataSource = setupDataSource("jdbc:sqlite::memory:");//jdbc:sqlite::memory: jdbc:sqlite:sqlite.db
+		DataSource dataSource = setupDataSource("jdbc:sqlite:sqlite.db");//jdbc:sqlite::memory: jdbc:sqlite:sqlite.db
 		
 
 		
-		boolean first=true;
+		/*boolean first=true;
 		
 		 Connection conn = null;
 	     Statement stmt = null;
@@ -83,7 +86,7 @@ public class SqliteRun {
 	            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
 	            try { if (conn != null) conn.close(); } catch(Exception e) { }
 	        }
-		
+		*/
 		/*Class.forName("org.sqlite.JDBC"); //simple case
 		Connection connection = null;
 		 try
@@ -125,6 +128,35 @@ public class SqliteRun {
 	            System.err.println(e);
 	          }
 	        }*/
+		
+		
+		 Connection conn = null;
+	     Statement stmt = null;
+	     ResultSet rset = null;
+	     DecimalFormat format=new DecimalFormat("000000000000");
+			try {
+				conn = dataSource.getConnection();
+				stmt = conn.createStatement();
+				for(int i=100;i<10100;i++){//10100
+					String uuid="";
+					try {
+						uuid = DatatypeConverter.printHexBinary(format.format(i).getBytes("US-ASCII"));
+						stmt.executeUpdate("insert into alert_value values('"+uuid+"', 999,999,999)");
+					} catch (UnsupportedEncodingException e) {
+						
+					}
+					
+					//stmt.executeUpdate("insert into alert_value values('', 999,999,999)");
+				}
+				
+			} catch(SQLException e) {
+		            e.printStackTrace();
+		        } finally {
+		            try { if (rset != null) rset.close(); } catch(Exception e) { }
+		            try { if (stmt != null) stmt.close(); } catch(Exception e) { }
+		            try { if (conn != null) conn.close(); } catch(Exception e) { }
+		        }
+		
 	      }
 
 	  public static DataSource setupDataSource(String connectURI) {
